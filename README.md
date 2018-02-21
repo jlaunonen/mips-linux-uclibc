@@ -40,11 +40,11 @@ The required `2.6.10` is not found on portage anymore, but `2.4.36` still is.
 Here we use that as a base for the required `2.6.10` version.
 
 ```sh
-# Prepare category and aux files directory.
+# Prepare category, package and aux files directories.
 cd /usr/local/portage
 mkdir -p sys-kernel/linux-headers/files
 
-# Copy the ebuild for base.
+# Copy ebuild from portage for base.
 cd sys-kernel/linux-headers
 cp -av /usr/portage/sys-kernel/linux-headers/linux-headers-2.4.36.ebuild ./linux-headers-2.6.10.ebuild
 ```
@@ -63,7 +63,7 @@ SRC_URI="${KERNEL_URI}"
 UNIPATCH_LIST="${FILESDIR}/1-makefile.patch"
 ```
 
-To finish this step, build Manifest of the ebuild, patch, and source package:
+To finish this step, build Manifest of the ebuild, patch, and source package (which is downloaded automatically):
 
 ```sh
 ebuild linux-headers-2.6.10.ebuild digest
@@ -80,4 +80,45 @@ $ find /usr/local/portage/sys-kernel
 /usr/local/portage/sys-kernel/linux-headers/files
 /usr/local/portage/sys-kernel/linux-headers/files/1-makefile.patch
 /usr/local/portage/sys-kernel/linux-headers/Manifest
+```
+
+
+### uclibc
+
+By the time of writing this, the `uclibc-0.9.*` ebuilds are not working correctly, due a [bug](https://bugs.gentoo.org/588554).
+Fortunately, the ticket contains [a fix in comment #5](https://bugs.gentoo.org/588554#c5).
+Download that attachment (named `uclibc.ebuild-001-mips.patch`) to somewhere, e.g. `/tmp`
+
+```sh
+# Prepare category and package directories.
+cd /usr/local/portage
+mkdir -p sys-libs/uclibc
+
+# Copy ebuild from portage for base.
+cd sys-libs/uclibc
+cp -av /usr/portage/sys-libs/uclibc/uclibc-0.9.33.2-r15.ebuild .
+
+# Apply the patch.
+patch -p1 --no-backup-if-mismatch < /tmp/uclibc.ebuild-001-mips.patch
+
+# Create The Manifest.
+ebuild uclibc-0.9.33.2-r15.ebuild digest
+
+
+# These commands are **optional**, only relevant if you want to use uclibc-0.9.33.9999
+cp -av /usr/portage/sys-libs/uclibc/uclibc-0.9.33.9999.ebuild .
+sed -e 's/0.9.33.2-r15/0.9.33.9999/;' /tmp/uclibc.ebuild-001-mips.patch > /tmp/uclibc.ebuild-001-mips-9999.patch
+patch -p1 --no-backup-if-mismatch < /tmp/uclibc.ebuild-001-mips-9999.patch
+ebuild uclibc-0.9.33.9999.ebuild digest
+```
+
+**Checkup:** As before, ensure stuff are in correct places.
+The actual ebuilds may differ if optional steps were followed in above snippet.
+
+```
+$ find /usr/local/portage/sys-libs
+/usr/local/portage/sys-libs/
+/usr/local/portage/sys-libs/uclibc
+/usr/local/portage/sys-libs/uclibc/uclibc-0.9.33.2-r15.ebuild
+/usr/local/portage/sys-libs/uclibc/Manifest
 ```
