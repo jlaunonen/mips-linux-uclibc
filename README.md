@@ -4,7 +4,7 @@ This document aims to guide the reader to creating their own mips-linux-uclibc t
 The versions and configurations used here are not totally vanilla and thus need more hands-on involvement than
 just running a long magic command.
 
-Resulting toolchain will contain following versions of various packages (excluding gentoo revisions):
+Resulting (stage 3) toolchain will contain following versions of various packages (excluding gentoo revisions):
 
 - `gcc-6.4.0` (different/more recent version may probably be used freely)
 - `binutils-2.29.1` (different/more recent version may probably be used freely)
@@ -53,9 +53,11 @@ Next we need a patch file to fix the `linux-headers-2.6.10` source package.
 The [1-makefile.patch](files/1-makefile.patch) (in raw form) must be copied in the previously created `files`-directory,
 or more specifically, into `/usr/local/portage/sys-kernel/linux-headers/files` .
 After that, the `2.6.10` ebuild must be modified of three variables so that the patch is actually applied,
-and no other patches are tried:
+and no other patches are tried, and that the package is actually supported on mips:
 
 ```
+H_SUPPORTEDARCH="alpha amd64 arm m68k mips ppc sh sparc x86"
+
 PATCHES_V=""
 
 SRC_URI="${KERNEL_URI}"
