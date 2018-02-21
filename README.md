@@ -6,7 +6,7 @@ just running a long magic command.
 
 Resulting (stage 3) toolchain will contain following versions of various packages (excluding gentoo revisions):
 
-- `gcc-6.4.0` (different/more recent version may probably be used freely)
+- `gcc-6.4.0` C-compiler (different/more recent version may probably be used freely)
 - `binutils-2.29.1` (different/more recent version may probably be used freely)
 - `uclibc-0.9.33.2` (must mostly match TARGET uclibc version)
 - `linux-headers-2.6.10` (must mostly match TARGET kernel version)
@@ -21,7 +21,8 @@ The `files/1-makefile.patch` is licensed under [GNU General Public License 2](LI
 
 ## Requirements
 
-- Gentoo linux with root shell. `sudo` works too if that is installed and preferred.
+- mips1 TARGET CPU.
+- Gentoo linux HOST with root shell. `sudo` works too if that is installed and preferred.
   All commands here unless otherwise noted are to be run as root.
 - `sys-devel/crossdev`. Version `20171230` is used in this guide, others may work, ymmv.
 
@@ -29,8 +30,9 @@ The `files/1-makefile.patch` is licensed under [GNU General Public License 2](LI
 
 - `sys-devel/binutils` is at version `2.29.1-r1`, and `sys-libs/binutils-libs` has same ('ish) or more recent version.
 - Portage contains `sys-libs/uclibc-0.9.33.2-r15`. The `0.9.33.9999` version can also be used.
-- The host Gentoo has local portage overlay configured.
+- The HOST Gentoo has local portage overlay configured.
   If not, follow [Defining a custom repository](https://wiki.gentoo.org/wiki/Handbook:AMD64/Portage/CustomTree#Defining_a_custom_repository) in Gentoo handbook.
+
 
 
 ## Setting up the custom ebuilds
@@ -85,6 +87,7 @@ $ find /usr/local/portage/sys-kernel
 ```
 
 
+
 ### uclibc
 
 By the time of writing this, the `uclibc-0.9.*` ebuilds are not working correctly, due a [bug](https://bugs.gentoo.org/588554).
@@ -124,3 +127,91 @@ $ find /usr/local/portage/sys-libs
 /usr/local/portage/sys-libs/uclibc/uclibc-0.9.33.2-r15.ebuild
 /usr/local/portage/sys-libs/uclibc/Manifest
 ```
+
+
+
+## Actual building
+
+Ebuilds prepared we can now use the *Gentoo Cross-toolchain generator* aka `crossdev` to build the toolchain.
+For `gcc` we disable PIE (although this may not be required).
+For `uclibc` we disable `nptl` as there seems to not be support for it in mips.
+Please note of the amount of dashes, equal signs and hyphens.
+
+```sh
+# Create  mips-example-linux-uclibc  toolchain. You may replace the "example" vendor field to something meaningful.
+# If you decided to use uclibc-0.9.33.9999, replace the version on --l line (still keeping the equal sign).
+crossdev \
+  -ol /usr/local/portage \
+  -ok /usr/local/portage \
+  -s3 \
+  --genv 'USE=-pie' \
+  --lenv 'USE=-nptl' \
+  --b =2.29.1-r1 \
+  --l =0.9.33.2-r15 \
+  --k =2.6.10 \
+  --g =6.4.0-r1 \
+  --target mips-example-linux-uclibc
+
+# You may add arguments  -P -v  to above command to see portage build output realtime. Otherwise, follow the logs in /var/log/portage/.
+```
+
+
+
+### Somewhat detailed description:
+
+- `-ol` and `-ok` guide crossdev to read libc and kernel-/linux-headers ebuilds from given
+  overlay (instead of gentoo portage), as we just created thoose.
+- `-s3` makes crossdev to build stage3 toolchain containing binutils (`-s0`), gcc (`-s1`), kernel headers (`-s2`) and libc (`-s3`).
+- `--genv` and `--lenv` adds environment variables to gcc and libc build processes, respectively.
+- `--b` declares binutils ebuild version to use.
+- `--l` declares libc ebuild version to use.
+- `--k` declares linux-headers ebuild version to use.
+- `--g` declares gcc ebuild version to use.
+- `--target mips-example-linux-uclibc` declares the toolchain name in form ARCH-VENDOR-OS-LIBC [crossdev --help].
+- Optional `-P -v` adds `-v` to portage command line, giving verbose output from the build process.
+
+The command creates a new category `cross-mips-example-linux-uclibc` in the portage for the cross-toolchain located
+in the local overlay: `/usr/local/portage/cross-mips-example-linux-uclibc` .
+The new sysroot resides in `/usr/mips-example-linux-uclibc` .
+Files in the installed packages can be seen with `equery files` as usual, but the cross-category should be included
+in the requested name, e.g. `equery files cross-mips-example-linux-uclibc/gcc`
+(`equery` tool belongs to `app-portage/gentoolkit` package).
+
+
+
+## Testing time!
+
+Write into `hello.c`:
+
+```c
+#include <stdio.h>
+int main(void) {
+  printf("Hello World, MIPS!\n");
+  return 0;
+}
+```
+
+Then run the newly created compiler on the file:
+
+```sh
+mips-example-linux-uclibc-gcc -o hello hello.c
+# or for static result:
+mips-example-linux-uclibc-gcc -o hello -static hello.c
+```
+
+Then copy the resulting ELF binary to the MIPS machine.
+
+
+
+## Removing the toolchain (totally optional)
+
+To remove the installed toolchain parts, the toolchain portage package category and configuration files related to
+the toolchain, run following:
+
+```sh
+crossdev --clean mips-example-linux-uclibc-gcc
+# Previous command leaves two binaries behind (on crossdev-20171230). Remove them manually:
+rm /usr/bin/mips-example-linux-uclibc-gcov-{dump,tool}
+```
+
+This does not remove the self-created ebuilds in overlay, allowing to continue from [Actual building](#actual-building) later if needed.
