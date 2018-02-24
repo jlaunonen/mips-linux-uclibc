@@ -1,10 +1,10 @@
-# mips-linux-uclibc cross-toolchain on Gentoo (WIP)
+# mips-linux-uclibc cross-toolchain on Gentoo
 
 This document aims to guide the reader to creating their own mips-linux-uclibc toolchain using tools provided by Gentoo linux.
 The versions and configurations used here are not totally vanilla and thus need more hands-on involvement than
 just running a long magic command.
 
-Resulting (stage 3) toolchain will contain following versions of various packages (excluding gentoo revisions):
+Resulting (stage 3) toolchain will contain following versions of various packages (excluding Gentoo revisions):
 
 - `gcc-6.4.0` C-compiler (different/more recent version may probably be used freely)
 - `binutils-2.29.1` (different/more recent version may probably be used freely)
@@ -21,10 +21,10 @@ The `files/1-makefile.patch` is licensed under [GNU General Public License 2](LI
 
 ## Requirements
 
-- mips1 TARGET CPU.
+- mips1 TARGET CPU. (mips1..mips4 and mips32..mips32r5 probably work.)
 - Gentoo linux HOST with root shell. `sudo` works too if that is installed and preferred.
-  All commands here unless otherwise noted are to be run as root.
-- `sys-devel/crossdev`. Version `20171230` is used in this guide, others may work, ymmv.
+  All commands here are to be run as root unless otherwise noted.
+- `sys-devel/crossdev`. Version `20171230` is used in this guide, more recent may work, ymmv.
 
 ## Assumptions
 
@@ -54,7 +54,7 @@ cp -av /usr/portage/sys-kernel/linux-headers/linux-headers-2.4.36.ebuild ./linux
 Next we need a patch file to fix the `linux-headers-2.6.10` source package.
 The [1-makefile.patch](files/1-makefile.patch) (in raw form) must be copied in the previously created `files`-directory,
 or more specifically, into `/usr/local/portage/sys-kernel/linux-headers/files` .
-After that, the `2.6.10` ebuild must be modified of three variables so that the patch is actually applied,
+After that, the `2.6.10` ebuild must be modified of few variables so that the patch is actually applied,
 and no other patches are tried, and that the package is actually supported on mips:
 
 ```
@@ -138,8 +138,10 @@ For `uclibc` we disable `nptl` as there seems to not be support for it in mips.
 Please note of the amount of dashes, equal signs and hyphens.
 
 ```sh
-# Create  mips-example-linux-uclibc  toolchain. You may replace the "example" vendor field to something meaningful.
-# If you decided to use uclibc-0.9.33.9999, replace the version on --l line (still keeping the equal sign).
+# Create  mips-example-linux-uclibc  toolchain.
+# You may replace the "example" vendor field to something meaningful.
+# If you decided to use uclibc-0.9.33.9999, replace the
+# version on --l line (still keeping the equal sign).
 crossdev \
   -ol /usr/local/portage \
   -ok /usr/local/portage \
@@ -152,7 +154,8 @@ crossdev \
   --g =6.4.0-r1 \
   --target mips-example-linux-uclibc
 
-# You may add arguments  -P -v  to above command to see portage build output realtime. Otherwise, follow the logs in /var/log/portage/.
+# You may add arguments  -P -v  to above command to see portage build output realtime.
+# Otherwise, follow the logs in /var/log/portage/.
 ```
 
 
@@ -160,7 +163,7 @@ crossdev \
 ### Somewhat detailed description:
 
 - `-ol` and `-ok` guide crossdev to read libc and kernel-/linux-headers ebuilds from given
-  overlay (instead of gentoo portage), as we just created thoose.
+  overlay (instead of Gentoo portage), as we just created thoose.
 - `-s3` makes crossdev to build stage3 toolchain containing binutils (`-s0`), gcc (`-s1`), kernel headers (`-s2`) and libc (`-s3`).
 - `--genv` and `--lenv` adds environment variables to gcc and libc build processes, respectively.
 - `--b` declares binutils ebuild version to use.
@@ -199,7 +202,7 @@ mips-example-linux-uclibc-gcc -o hello hello.c
 mips-example-linux-uclibc-gcc -o hello -static hello.c
 ```
 
-Then copy the resulting ELF binary to the MIPS machine.
+Then copy the resulting ELF binary to the MIPS machine and run it.
 
 
 
